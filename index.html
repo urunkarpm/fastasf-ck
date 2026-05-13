@@ -222,17 +222,71 @@
   }
   requestAnimationFrame(render);
 
+  // Endpoint pools with alternatives for retry logic
+  const PING_ENDPOINTS = [
+    'https://httpbin.org/get',
+    'https://api.ipify.org?format=json',
+    'https://jsonplaceholder.typicode.com/posts/1',
+    'https://reqres.in/api/users/1'
+  ];
+
+  const DOWNLOAD_ENDPOINTS = [
+    { url: 'https://speed.hetzner.de/10MB.bin', size: 10 * 1024 * 1024 },
+    { url: 'https://proof.ovh.net/files/10Mb.dat', size: 10 * 1024 * 1024 },
+    { url: 'https://ipv4.download.thinkbroadband.com/10MB.zip', size: 10 * 1024 * 1024 },
+    { url: 'https://download.iij.ad.jp/pub/ISO/10MB.bin', size: 10 * 1024 * 1024 }
+  ];
+
+  const UPLOAD_ENDPOINTS = [
+    'https://httpbin.org/post',
+    'https://jsonplaceholder.typicode.com/posts',
+    'https://reqres.in/api/users'
+  ];
+
+  const MAX_RETRIES = 3;
+  const RETRY_DELAY_MS = 500;
+
+  async function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
   async function measurePing(samples = 4){
     const values = [];
     for (let i = 0; i < samples; i++) {
-      const t0 = performance.now();
-      try {
-        await Promise.race([
-          fetch(`https://httpbin.org/get?x=${Math.random()}`, { cache: 'no-store' }),
-          new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 2500))
-        ]);
-        values.push(performance.now() - t0);
-      } catch {}
+      let success = false;
+      for (const endpoint of PING_ENDPOINTS) {
+        if (success) break;
+        const t0 = performance.now();
+        try {
+          await Promise.race([
+            fetch(`${endpoint}?x=${Math.random()}`, { cache: 'no-store', mode: 'cors', signal: AbortSignal.timeout(2500) }),
+            new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 2500))
+          ]);
+          values.push(performance.now() - t0);
+          success = true;
+        } catch (e) {
+          // Try next endpoint
+        }
+      }
+      if (!success && i === 0) {
+        // First sample failed, retry all endpoints with delays
+        for (let retry = 0; retry < MAX_RETRIES && !success; retry++) {
+          await delay(RETRY_DELAY_MS * (retry + 1));
+          for (const endpoint of PING_ENDPOINTS) {
+            if (success) break;
+            const t0 = performance.now();
+            try {
+              await Promise.race([
+                fetch(`${endpoint}?x=${Math.random()}`, { cache: 'no-store', mode: 'cors', signal: AbortSignal.timeout(2500) })
+              ]);
+              values.push(performance.now() - t0);
+              success = true;
+            } catch (e) {
+              // Try next
+            }
+          }
+        }
+      }
       await new Promise(r => setTimeout(r, 120));
     }
     if (!values.length) return null;
@@ -242,39 +296,82 @@
   }
 
   async function measureDownloadMbps(seconds = 3){
-    const url = `https://speed.hetzner.de/10MB.bin?x=${Math.random()}`;
-    const start = performance.now();
-    let bytes = 0;
-    const response = await fetch(url, { cache: 'no-store' });
-    const reader = response.body.getReader();
+    let lastError = null;
+    
+    for (let attempt = 0; attempt < DOWNLOAD_ENDPOINTS.length; attempt++) {
+      const endpoint = DOWNLOAD_ENDPOINTS[attempt];
+      const url = `${endpoint.url}?x=${Math.random()}`;
+      
+      try {
+        const start = performance.now();
+        let bytes = 0;
+        const response = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(15000) });
+        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        const reader = response.body.getReader();
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      bytes += value.byteLength;
-      if ((performance.now() - start) / 1000 >= seconds) {
-        await reader.cancel();
-        break;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          bytes += value.byteLength;
+          if ((performance.now() - start) / 1000 >= seconds) {
+            await reader.cancel();
+            break;
+          }
+        }
+
+        const elapsed = (performance.now() - start) / 1000;
+        if (elapsed > 0 && bytes > 0) {
+          const mbps = (bytes * 8) / (elapsed * 1_000_000);
+          return mbps;
+        }
+      } catch (e) {
+        lastError = e;
+        // Try next endpoint after a brief delay
+        if (attempt < DOWNLOAD_ENDPOINTS.length - 1) {
+          await delay(RETRY_DELAY_MS * (attempt + 1));
+        }
       }
     }
-
-    const elapsed = (performance.now() - start) / 1000;
-    const mbps = (bytes * 8) / (elapsed * 1_000_000);
-    return mbps;
+    
+    throw lastError || new Error('All download endpoints failed');
   }
 
   async function measureUploadMbps(megabytes = 4){
     const payload = new Uint8Array(megabytes * 1024 * 1024);
     crypto.getRandomValues(payload.subarray(0, Math.min(payload.length, 65536)));
-    const start = performance.now();
-    await fetch('https://httpbin.org/post', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/octet-stream' },
-      body: payload
-    });
-    const elapsed = (performance.now() - start) / 1000;
-    const mbps = (payload.byteLength * 8) / (elapsed * 1_000_000);
-    return mbps;
+    let lastError = null;
+    
+    for (let attempt = 0; attempt < UPLOAD_ENDPOINTS.length; attempt++) {
+      const endpoint = UPLOAD_ENDPOINTS[attempt];
+      
+      try {
+        const start = performance.now();
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/octet-stream' },
+          body: payload,
+          signal: AbortSignal.timeout(30000)
+        });
+        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        const elapsed = (performance.now() - start) / 1000;
+        if (elapsed > 0) {
+          const mbps = (payload.byteLength * 8) / (elapsed * 1_000_000);
+          return mbps;
+        }
+      } catch (e) {
+        lastError = e;
+        // Try next endpoint after a brief delay
+        if (attempt < UPLOAD_ENDPOINTS.length - 1) {
+          await delay(RETRY_DELAY_MS * (attempt + 1));
+        }
+      }
+    }
+    
+    throw lastError || new Error('All upload endpoints failed');
   }
 
   function setProgress(p, phase){ state.progress=p; progressBar.style.width=p+'%'; phaseLabel.textContent=phase; }
@@ -312,7 +409,8 @@
       setProgress(100,'Complete');
       verdict.textContent = state.download > 500 ? 'Verdict: Exceptional throughput for demanding tasks.' : state.download > 150 ? 'Verdict: Strong connection for everyday heavy usage.' : 'Verdict: Basic to moderate connection quality.';
     } catch (e) {
-      verdict.textContent = 'Test failed: network endpoint unavailable. Try again.';
+      console.error('Speed test error:', e);
+      verdict.textContent = `Test failed: ${e.message || 'Network endpoint unavailable'}. Retrying with alternative servers...`;
     } finally {
       state.running=false;
     }
