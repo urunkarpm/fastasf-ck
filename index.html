@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>fastasf*ck – Packet Speed Test Visualizer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+  <style>
+    :root {
+      --bg: #0b1020;
+      --bg-soft: #131a30;
+      --card: #151f38;
+      --text: #e8edff;
+      --muted: #9fb0d3;
+      --accent: #4fc3ff;
+      --accent-2: #ff9f43;
+      --good: #1fd18b;
+      --line: #2f436f;
+      --shadow: 0 12px 30px rgba(0,0,0,.25);
+    }
+    body.light {
+      --bg: #f5f7fa;
+      --bg-soft: #ffffff;
+      --card: #ffffff;
+      --text: #172033;
+      --muted: #5f6f8f;
+      --accent: #1877f2;
+      --accent-2: #d97706;
+      --good: #0f9f6e;
+      --line: #c6d4ee;
+      --shadow: 0 10px 24px rgba(20,40,90,.12);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, sans-serif;
+      background: linear-gradient(160deg, var(--bg), var(--bg-soft));
+      color: var(--text);
+    }
+    .app { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    .topbar { display:flex; justify-content:flex-end; margin-bottom:10px; }
+    .theme-btn {
+      border:1px solid var(--line); background:var(--card); color:var(--text);
+      padding:10px 12px; border-radius:999px; cursor:pointer;
+    }
+    .layout { display:grid; grid-template-columns: 40% 60%; gap:18px; }
+    .panel, .visual { background: var(--card); border:1px solid var(--line); border-radius:16px; box-shadow: var(--shadow); }
+    .panel { padding:20px; }
+    h1 { margin: 0; font-size: 2.2rem; font-weight: 800; }
+    .asterisk { cursor: help; border-bottom:1px dotted var(--muted); }
+    .tagline { color: var(--muted); margin: 8px 0 18px; }
+    .controls { display:grid; gap:10px; }
+    button { border:none; border-radius:12px; padding:12px 14px; font-weight:700; cursor:pointer; }
+    .start { background: var(--accent); color:#fff; }
+    .stop { background:#7c8fb8; color:#fff; }
+    .pause { background:#394d78; color:#fff; }
+    .row { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    input[type="range"] { width:100%; }
+    .toggle { width:44px; height:24px; border-radius:999px; background:#6179a8; position:relative; cursor:pointer; }
+    .toggle::after { content:""; width:18px; height:18px; border-radius:50%; background:#fff; position:absolute; left:3px; top:3px; transition:.2s; }
+    .toggle.on { background: var(--good); }
+    .toggle.on::after { left:23px; }
+    .progress-wrap { margin-top:6px; }
+    .progress { height:12px; background:#26365d; border-radius:999px; overflow:hidden; }
+    .progress > span { display:block; height:100%; width:0; background:linear-gradient(90deg, var(--accent), #79dbff); transition:width .2s; }
+    .phase { color:var(--muted); margin-top:6px; font-size:.9rem; }
+    .results h2 { margin:14px 0 8px; font-size:1.2rem; }
+    .metrics { display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; }
+    .metric { background:rgba(125,145,190,.15); border:1px solid var(--line); border-radius:12px; padding:10px; }
+    .metric .value { font-size:1.5rem; font-weight:800; }
+    .verdict { margin-top:10px; font-weight:700; color:var(--good); }
+    .entities { margin-top:14px; display:grid; gap:8px; }
+    .entity-card { border:1px solid var(--line); border-radius:12px; padding:10px; background:rgba(100,130,190,.08); }
+    .entity-card h3 { display:inline; margin-left:8px; font-size:1rem; }
+    .entity-card p { margin:8px 0; color:var(--muted); font-size:.92rem; }
+    .entity-card summary { cursor:pointer; font-weight:600; }
+    .visual { padding:14px; }
+    canvas { width:100%; height:350px; display:block; border-radius:12px; background:#0a0f1e; border:1px solid var(--line); }
+    body.light canvas { background:#f5f7fa; }
+    footer { text-align:center; color:var(--muted); padding:16px 8px 6px; }
+    @media (max-width: 920px){ .layout{grid-template-columns:1fr;} canvas{height:280px;} }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="topbar">
+      <button class="theme-btn" id="themeBtn" aria-label="Toggle theme"><i class="fas fa-moon"></i></button>
+    </div>
+    <div class="layout">
+      <section class="panel">
+        <h1>fastasf<span class="asterisk" title="* = uck, it’s fast">*</span>ck</h1>
+        <p class="tagline">See packets fly. Measure speed. Understand the internet.</p>
+
+        <div class="controls">
+          <button class="start" id="startBtn"><i class="fas fa-play"></i> Start fastasf*ck Test</button>
+          <div class="row">
+            <button class="pause" id="pauseBtn"><i class="fas fa-pause"></i> Pause</button>
+            <button class="stop" id="stopBtn"><i class="fas fa-stop"></i> Stop / Reset</button>
+          </div>
+
+          <label for="bw"><i class="fas fa-gauge-high"></i> Bandwidth target: <strong id="bwLabel">300</strong> Mbps</label>
+          <input type="range" min="1" max="1000" value="300" id="bw" />
+
+          <div class="row">
+            <span><i class="fas fa-chart-line"></i> Packet loss simulation</span>
+            <div id="lossToggle" class="toggle" role="switch" aria-checked="false" tabindex="0"></div>
+          </div>
+
+          <div class="progress-wrap">
+            <div class="progress"><span id="progressBar"></span></div>
+            <div class="phase" id="phaseLabel">Idle</div>
+          </div>
+        </div>
+
+        <div class="results">
+          <h2>fastasf*ck Results</h2>
+          <div class="metrics">
+            <div class="metric"><div>Ping</div><div class="value" id="pingVal">--</div><div>ms</div></div>
+            <div class="metric"><div>Download</div><div class="value" id="dlVal">--</div><div>Mbps</div></div>
+            <div class="metric"><div>Upload</div><div class="value" id="ulVal">--</div><div>Mbps</div></div>
+          </div>
+          <div class="verdict" id="verdict">Run a test to see your connection rating.</div>
+        </div>
+
+        <div class="entities">
+          <div class="entity-card"><i class="fas fa-desktop"></i><h3>Your Device</h3><p>Sends and receives packets while timing each phase.</p><details><summary>More</summary>Uses OS networking APIs and TCP/IP stack; retries occur when packets drop.</details></div>
+          <div class="entity-card"><i class="fas fa-network-wired"></i><h3>Router</h3><p>Directs local traffic to the next hop on your network path.</p><details><summary>More</summary>Performs routing and often NAT, queueing packets under high load.</details></div>
+          <div class="entity-card"><i class="fas fa-cloud"></i><h3>ISP</h3><p>Backbone provider carrying traffic across regional infrastructure.</p><details><summary>More</summary>Peering and congestion inside the provider influence throughput and latency.</details></div>
+          <div class="entity-card"><i class="fas fa-server"></i><h3>Server</h3><p>Test endpoint that sends and receives measured packet streams.</p><details><summary>More</summary>Server CPU, NIC capacity, and distance can cap observed speed.</details></div>
+        </div>
+      </section>
+
+      <section class="visual">
+        <canvas id="netCanvas" width="900" height="350"></canvas>
+      </section>
+    </div>
+    <footer>© fastasf*ck – educational demo. Packets simulated for clarity.</footer>
+  </div>
+
+<script>
+(() => {
+  const c = document.getElementById('netCanvas');
+  const ctx = c.getContext('2d');
+  const state = {
+    running:false, paused:false, loss:false, phase:'idle', progress:0,
+    ping: null, download: null, upload: null, packets:[], t:0
+  };
+  const nodes = [
+    {x:120,y:175,label:'Your Device'},
+    {x:320,y:175,label:'Router'},
+    {x:540,y:175,label:'ISP'},
+    {x:770,y:175,label:'Server'}
+  ];
+
+  const progressBar = document.getElementById('progressBar');
+  const phaseLabel = document.getElementById('phaseLabel');
+  const pingVal = document.getElementById('pingVal');
+  const dlVal = document.getElementById('dlVal');
+  const ulVal = document.getElementById('ulVal');
+  const verdict = document.getElementById('verdict');
+  const bw = document.getElementById('bw');
+  const bwLabel = document.getElementById('bwLabel');
+
+  bw.oninput = () => bwLabel.textContent = bw.value;
+
+  function themeText(){ return getComputedStyle(document.body).getPropertyValue('--text').trim(); }
+  function lineColor(){ return getComputedStyle(document.body).getPropertyValue('--line').trim(); }
+
+  function drawNode(n){
+    ctx.fillStyle = 'rgba(80,150,255,.14)'; ctx.strokeStyle = lineColor(); ctx.lineWidth = 2;
+    roundRect(n.x-72,n.y-28,144,56,14); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = themeText(); ctx.font = '600 15px Inter'; ctx.textAlign='center'; ctx.fillText(n.label, n.x, n.y+5);
+  }
+  function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+
+  function drawLines(){
+    ctx.strokeStyle = lineColor(); ctx.lineWidth = 2;
+    for(let i=0;i<nodes.length-1;i++){
+      const a=nodes[i], b=nodes[i+1];
+      ctx.beginPath(); ctx.moveTo(a.x+72,a.y); ctx.lineTo(b.x-72,b.y); ctx.stroke();
+      const mx=(a.x+b.x)/2; drawArrow(mx,b.y,12);
+    }
+  }
+  function drawArrow(x,y,s){ ctx.fillStyle=lineColor(); ctx.beginPath(); ctx.moveTo(x-s/2,y-6); ctx.lineTo(x+s/2,y); ctx.lineTo(x-s/2,y+6); ctx.closePath(); ctx.fill(); }
+
+  function spawn(type, reverse=false){
+    const duration = type==='ping'?1.0:type==='download'?1.5:1.4;
+    state.packets.push({type, reverse, p:0, duration, dead:false, drop: state.loss && Math.random()<0.12});
+  }
+
+  function drawPacket(p){
+    const start= p.reverse?nodes[3]:nodes[0]; const end = p.reverse?nodes[0]:nodes[3];
+    const x = start.x + (end.x-start.x)*p.p; const y = 175 + Math.sin((p.p*8)+state.t)*10;
+    ctx.save(); ctx.translate(x,y);
+    if(p.type==='ping'){ ctx.fillStyle='#59e7ff'; ctx.beginPath(); ctx.arc(0,0,7,0,Math.PI*2); ctx.fill(); }
+    if(p.type==='download'){ ctx.fillStyle='#3d8bff'; ctx.fillRect(-7,-7,14,14); }
+    if(p.type==='upload'){ ctx.fillStyle='#ff9f43'; ctx.beginPath(); ctx.moveTo(0,-9); ctx.lineTo(8,7); ctx.lineTo(-8,7); ctx.closePath(); ctx.fill(); }
+    if(p.drop){ ctx.strokeStyle='#ff5f5f'; ctx.beginPath(); ctx.moveTo(-8,-8); ctx.lineTo(8,8); ctx.moveTo(8,-8); ctx.lineTo(-8,8); ctx.stroke(); }
+    ctx.restore();
+  }
+
+  function updatePackets(dt){
+    state.packets = state.packets.filter(p=>!p.dead);
+    state.packets.forEach(p=>{
+      p.p += dt/p.duration;
+      if(p.drop && p.p>0.55){ p.dead=true; return; }
+      if(p.p>=1) p.dead=true;
+    });
+  }
+
+  function render(ts){
+    const dt = state.last ? Math.min((ts-state.last)/1000, .05) : .016;
+    state.last = ts; state.t += dt*2;
+    ctx.clearRect(0,0,c.width,c.height);
+    drawLines(); nodes.forEach(drawNode);
+    if(state.running && !state.paused) updatePackets(dt);
+    state.packets.forEach(drawPacket);
+    requestAnimationFrame(render);
+  }
+  requestAnimationFrame(render);
+
+  async function measurePing(){
+    const t0 = performance.now();
+    try {
+      await Promise.race([
+        fetch('https://httpbin.org/get?x='+Math.random(), {cache:'no-store'}),
+        new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),2000))
+      ]);
+      return Math.max(10, Math.min(120, Math.round(performance.now()-t0)));
+    } catch { return 10 + Math.floor(Math.random()*111); }
+  }
+
+  function setProgress(p, phase){ state.progress=p; progressBar.style.width=p+'%'; phaseLabel.textContent=phase; }
+
+  async function runTest(){
+    state.running=true; state.paused=false; state.phase='ping'; state.packets=[];
+    pingVal.textContent='--'; dlVal.textContent='--'; ulVal.textContent='--'; verdict.textContent='Testing path and throughput...';
+
+    setProgress(5,'Phase 1/3: Ping');
+    spawn('ping');
+    state.ping = await measurePing();
+    pingVal.textContent = state.ping;
+    setProgress(33,'Phase 2/3: Download');
+
+    const target = Number(bw.value);
+    for(let i=0;i<34;i++){
+      if(!state.running) return;
+      while(state.paused) await new Promise(r=>setTimeout(r,120));
+      spawn('download');
+      setProgress(33 + i*1.2,'Phase 2/3: Download');
+      await new Promise(r=>setTimeout(r,60));
+    }
+    state.download = Math.max(1, Math.round(target*(0.75 + Math.random()*0.25) * 10)/10);
+    dlVal.textContent = state.download;
+
+    setProgress(74,'Phase 3/3: Upload');
+    for(let i=0;i<22;i++){
+      if(!state.running) return;
+      while(state.paused) await new Promise(r=>setTimeout(r,120));
+      spawn('upload', true);
+      setProgress(74 + i*1.1,'Phase 3/3: Upload');
+      await new Promise(r=>setTimeout(r,75));
+    }
+    state.upload = Math.max(1, Math.round(target*(0.45 + Math.random()*0.35) * 10)/10);
+    ulVal.textContent = state.upload;
+
+    setProgress(100,'Complete');
+    state.running=false;
+    verdict.textContent = state.download > 500 ? 'Verdict: Exceptional throughput for demanding tasks.' : state.download > 150 ? 'Verdict: Strong connection for everyday heavy usage.' : 'Verdict: Basic to moderate connection quality.';
+  }
+
+  document.getElementById('startBtn').onclick = () => { if(!state.running) runTest(); };
+  document.getElementById('stopBtn').onclick = () => {
+    state.running=false; state.paused=false; state.packets=[]; setProgress(0,'Idle');
+    pingVal.textContent='--'; dlVal.textContent='--'; ulVal.textContent='--'; verdict.textContent='Run a test to see your connection rating.';
+    document.getElementById('pauseBtn').innerHTML = '<i class="fas fa-pause"></i> Pause';
+  };
+  document.getElementById('pauseBtn').onclick = () => {
+    if(!state.running) return;
+    state.paused=!state.paused;
+    document.getElementById('pauseBtn').innerHTML = state.paused ? '<i class="fas fa-play"></i> Resume' : '<i class="fas fa-pause"></i> Pause';
+  };
+
+  const lossToggle = document.getElementById('lossToggle');
+  function setLoss(v){ state.loss=v; lossToggle.classList.toggle('on',v); lossToggle.setAttribute('aria-checked', String(v)); }
+  lossToggle.onclick = ()=>setLoss(!state.loss);
+  lossToggle.onkeydown = (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); setLoss(!state.loss); } };
+
+  const themeBtn = document.getElementById('themeBtn');
+  function applyTheme(mode){
+    document.body.classList.toggle('light', mode==='light');
+    themeBtn.innerHTML = mode==='light' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+    localStorage.setItem('fastasf_theme', mode);
+  }
+  themeBtn.onclick = () => applyTheme(document.body.classList.contains('light') ? 'dark' : 'light');
+  applyTheme(localStorage.getItem('fastasf_theme') || 'dark');
+})();
+</script>
+</body>
+</html>
