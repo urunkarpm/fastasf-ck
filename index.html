@@ -20,6 +20,8 @@
       --good: #1fd18b;
       --line: #2f436f;
       --shadow: 0 12px 30px rgba(0,0,0,.25);
+      --danger: #ff5f5f;
+      --warning: #ffb84d;
     }
     body.light {
       --bg: #f5f7fa;
@@ -32,6 +34,8 @@
       --good: #0f9f6e;
       --line: #c6d4ee;
       --shadow: 0 10px 24px rgba(20,40,90,.12);
+      --danger: #dc2626;
+      --warning: #d97706;
     }
     * { box-sizing: border-box; }
     body {
@@ -39,102 +43,371 @@
       font-family: Inter, system-ui, sans-serif;
       background: linear-gradient(160deg, var(--bg), var(--bg-soft));
       color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
-    .app { max-width: 1200px; margin: 0 auto; padding: 20px; }
-    .topbar { display:flex; justify-content:flex-end; margin-bottom:10px; }
+    .app { max-width: 1200px; margin: 0 auto; padding: 24px; }
+    .topbar { display:flex; justify-content:flex-end; margin-bottom:16px; }
     .theme-btn {
       border:1px solid var(--line); background:var(--card); color:var(--text);
-      padding:10px 12px; border-radius:999px; cursor:pointer;
+      padding:10px 14px; border-radius:999px; cursor:pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9rem;
     }
-    .layout { display:grid; grid-template-columns: 40% 60%; gap:18px; }
+    .theme-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+    .theme-btn:active { transform: translateY(0); }
+    .layout { display:grid; grid-template-columns: 40% 60%; gap:24px; }
     .panel, .visual { background: var(--card); border:1px solid var(--line); border-radius:16px; box-shadow: var(--shadow); }
-    .panel { padding:20px; }
-    h1 { margin: 0; font-size: 2.2rem; font-weight: 800; }
-    .asterisk { cursor: help; border-bottom:1px dotted var(--muted); }
-    .tagline { color: var(--muted); margin: 8px 0 18px; }
-    .controls { display:grid; gap:10px; }
-    button { border:none; border-radius:12px; padding:12px 14px; font-weight:700; cursor:pointer; }
+    .panel { padding:24px; }
+    h1 { margin: 0; font-size: 2.4rem; font-weight: 800; letter-spacing: -0.02em; }
+    .asterisk { 
+      cursor: help; 
+      border-bottom:1px dotted var(--muted);
+      position: relative;
+      display: inline-block;
+    }
+    .asterisk:hover, .asterisk:focus { color: var(--accent); }
+    .asterisk-tooltip {
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%) translateY(-8px);
+      background: var(--bg-soft);
+      border: 1px solid var(--line);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.2s ease;
+      box-shadow: var(--shadow);
+      z-index: 10;
+    }
+    .asterisk:hover .asterisk-tooltip, .asterisk:focus .asterisk-tooltip {
+      opacity: 1;
+      transform: translateX(-50%) translateY(-4px);
+    }
+    .tagline { color: var(--muted); margin: 10px 0 20px; font-size: 1.05rem; }
+    .controls { display:grid; gap:14px; }
+    button { 
+      border:none; 
+      border-radius:12px; 
+      padding:14px 18px; 
+      font-weight:700; 
+      cursor:pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 0.95rem;
+    }
+    button:hover:not(:disabled) { transform: translateY(-2px); box-shadow: var(--shadow); }
+    button:active:not(:disabled) { transform: translateY(0); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
     .start { background: var(--accent); color:#fff; }
+    .start:hover:not(:disabled) { filter: brightness(1.1); }
     .stop { background:#7c8fb8; color:#fff; }
     .pause { background:#394d78; color:#fff; }
+    .pause:hover:not(:disabled) { background:#4a5f8a; }
     .row { display:flex; align-items:center; justify-content:space-between; gap:10px; }
-    input[type="range"] { width:100%; }
-    .toggle { width:44px; height:24px; border-radius:999px; background:#6179a8; position:relative; cursor:pointer; }
-    .toggle::after { content:""; width:18px; height:18px; border-radius:50%; background:#fff; position:absolute; left:3px; top:3px; transition:.2s; }
+    label { display: block; margin-bottom: 6px; font-weight: 600; }
+    input[type="range"] { 
+      width:100%; 
+      height: 8px;
+      border-radius: 999px;
+      background: var(--line);
+      appearance: none;
+      outline: none;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      transition: transform 0.15s ease;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+    input[type="range"]::-moz-range-thumb {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+    .toggle { 
+      width:48px; 
+      height:28px; 
+      border-radius:999px; 
+      background:#6179a8; 
+      position:relative; 
+      cursor:pointer;
+      transition: background 0.2s ease;
+      flex-shrink: 0;
+    }
+    .toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .toggle::after { 
+      content:""; 
+      width:20px; 
+      height:20px; 
+      border-radius:50%; 
+      background:#fff; 
+      position:absolute; 
+      left:4px; 
+      top:4px; 
+      transition: all 0.25s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
     .toggle.on { background: var(--good); }
-    .toggle.on::after { left:23px; }
-    .progress-wrap { margin-top:6px; }
-    .progress { height:12px; background:#26365d; border-radius:999px; overflow:hidden; }
-    .progress > span { display:block; height:100%; width:0; background:linear-gradient(90deg, var(--accent), #79dbff); transition:width .2s; }
-    .phase { color:var(--muted); margin-top:6px; font-size:.9rem; }
-    .results h2 { margin:14px 0 8px; font-size:1.2rem; }
-    .metrics { display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; }
-    .metric { background:rgba(125,145,190,.15); border:1px solid var(--line); border-radius:12px; padding:10px; }
-    .metric .value { font-size:1.5rem; font-weight:800; }
-    .verdict { margin-top:10px; font-weight:700; color:var(--good); }
-    .entities { margin-top:14px; display:grid; gap:8px; }
-    .entity-card { border:1px solid var(--line); border-radius:12px; padding:10px; background:rgba(100,130,190,.08); }
-    .entity-card h3 { display:inline; margin-left:8px; font-size:1rem; }
-    .entity-card p { margin:8px 0; color:var(--muted); font-size:.92rem; }
-    .entity-card summary { cursor:pointer; font-weight:600; }
-    .visual { padding:14px; }
-    canvas { width:100%; height:350px; display:block; border-radius:12px; background:#0a0f1e; border:1px solid var(--line); }
+    .toggle.on::after { left:24px; }
+    .progress-wrap { margin-top:10px; }
+    .progress { 
+      height:14px; 
+      background:#26365d; 
+      border-radius:999px; 
+      overflow:hidden;
+      position: relative;
+    }
+    .progress > span { 
+      display:block; 
+      height:100%; 
+      width:0; 
+      background:linear-gradient(90deg, var(--accent), #79dbff); 
+      transition:width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+    }
+    .progress > span::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      animation: shimmer 1.5s infinite;
+    }
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    .phase { 
+      color:var(--muted); 
+      margin-top:10px; 
+      font-size:0.95rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .phase-icon { font-size: 1rem; }
+    .results { margin-top: 24px; }
+    .results h2 { margin:0 0 12px; font-size:1.3rem; font-weight: 700; }
+    .metrics { display:grid; grid-template-columns: repeat(3, 1fr); gap:14px; }
+    .metric { 
+      background:rgba(125,145,190,.15); 
+      border:1px solid var(--line); 
+      border-radius:14px; 
+      padding:16px 12px;
+      text-align: center;
+      transition: all 0.2s ease;
+    }
+    .metric:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+    .metric .label { font-size: 0.85rem; color: var(--muted); margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+    .metric .value { font-size:2rem; font-weight:800; line-height: 1.2; }
+    .metric .unit { font-size: 0.9rem; color: var(--muted); font-weight: 600; margin-top: 4px; }
+    .verdict { 
+      margin-top:16px; 
+      font-weight:700; 
+      color:var(--good);
+      padding: 14px 16px;
+      background: rgba(31, 209, 139, 0.1);
+      border-radius: 12px;
+      border-left: 4px solid var(--good);
+    }
+    .entities { margin-top:20px; display:grid; gap:10px; }
+    .entity-card { 
+      border:1px solid var(--line); 
+      border-radius:12px; 
+      padding:14px; 
+      background:rgba(100,130,190,.08);
+      transition: all 0.2s ease;
+    }
+    .entity-card:hover { transform: translateX(4px); border-color: var(--accent); }
+    .entity-card h3 { display:inline; margin-left:8px; font-size:1rem; font-weight: 700; }
+    .entity-card p { margin:10px 0 8px; color:var(--muted); font-size:.92rem; line-height: 1.5; }
+    .entity-card summary { 
+      cursor:pointer; 
+      font-weight:600;
+      color: var(--accent);
+      padding: 6px 0;
+      transition: color 0.2s ease;
+    }
+    .entity-card summary:hover { color: var(--accent-2); }
+    .entity-card details[open] summary { margin-bottom: 8px; }
+    .entity-card details p { 
+      margin-top: 8px; 
+      padding: 10px 12px; 
+      background: rgba(0,0,0,0.15); 
+      border-radius: 8px;
+      font-size: 0.88rem;
+    }
+    .visual { padding:18px; }
+    canvas { 
+      width:100%; 
+      height:350px; 
+      display:block; 
+      border-radius:12px; 
+      background:#0a0f1e; 
+      border:1px solid var(--line);
+      transition: box-shadow 0.2s ease;
+    }
+    canvas:hover { box-shadow: 0 0 0 3px rgba(79, 195, 255, 0.15); }
     body.light canvas { background:#f5f7fa; }
-    footer { text-align:center; color:var(--muted); padding:16px 8px 6px; }
-    @media (max-width: 920px){ .layout{grid-template-columns:1fr;} canvas{height:280px;} }
+    footer { text-align:center; color:var(--muted); padding:24px 8px 12px; font-size: 0.9rem; }
+    
+    /* Loading spinner */
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    /* Accessibility improvements */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+    
+    /* Focus visible styles */
+    button:focus-visible, input:focus-visible, .toggle:focus-visible, summary:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+    
+    @media (max-width: 920px){ 
+      .layout{grid-template-columns:1fr;} 
+      canvas{height:280px;}
+      .app { padding: 16px; }
+      .panel { padding: 18px; }
+      .metrics { grid-template-columns: 1fr; }
+      .metric { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; }
+      .metric .value { font-size: 1.6rem; }
+    }
+    @media (max-width: 480px) {
+      h1 { font-size: 1.8rem; }
+      .row { flex-direction: column; align-items: flex-start; gap: 8px; }
+      .toggle { align-self: flex-end; }
+    }
   </style>
 </head>
 <body>
-  <div class="app">
+<div class="app">
     <div class="topbar">
-      <button class="theme-btn" id="themeBtn" aria-label="Toggle theme"><i class="fas fa-moon"></i></button>
+      <button class="theme-btn" id="themeBtn" aria-label="Toggle theme">
+        <i class="fas fa-moon"></i>
+        <span class="theme-text">Theme</span>
+      </button>
     </div>
     <div class="layout">
       <section class="panel">
-        <h1>fastasf<span class="asterisk" title="* = uck, it’s fast">*</span>ck</h1>
+        <h1>fastasf<span class="asterisk" tabindex="0" aria-describedby="asterisk-desc">*</span>ck
+          <span class="asterisk-tooltip" id="asterisk-desc">* = uck, it's fast</span>
+        </h1>
         <p class="tagline">See packets fly. Measure speed. Understand the internet.</p>
 
         <div class="controls">
-          <button class="start" id="startBtn"><i class="fas fa-play"></i> Start fastasf*ck Test</button>
+          <button class="start" id="startBtn"><i class="fas fa-play"></i> Start Test</button>
           <div class="row">
-            <button class="pause" id="pauseBtn"><i class="fas fa-pause"></i> Pause</button>
-            <button class="stop" id="stopBtn"><i class="fas fa-stop"></i> Stop / Reset</button>
+            <button class="pause" id="pauseBtn" disabled><i class="fas fa-pause"></i> Pause</button>
+            <button class="stop" id="stopBtn" disabled><i class="fas fa-stop"></i> Reset</button>
           </div>
 
           <label for="bw"><i class="fas fa-gauge-high"></i> Bandwidth target: <strong id="bwLabel">300</strong> Mbps</label>
-          <input type="range" min="1" max="1000" value="300" id="bw" />
+          <input type="range" min="1" max="1000" value="300" id="bw" aria-label="Bandwidth target in Mbps" />
 
           <div class="row">
             <span><i class="fas fa-chart-line"></i> Packet loss simulation</span>
-            <div id="lossToggle" class="toggle" role="switch" aria-checked="false" tabindex="0"></div>
+            <div id="lossToggle" class="toggle" role="switch" aria-checked="false" tabindex="0" aria-label="Toggle packet loss simulation"></div>
           </div>
 
-          <div class="progress-wrap">
+          <div class="progress-wrap" aria-live="polite">
             <div class="progress"><span id="progressBar"></span></div>
-            <div class="phase" id="phaseLabel">Idle</div>
+            <div class="phase" id="phaseLabel"><i class="fas fa-circle phase-icon"></i> Idle</div>
           </div>
         </div>
 
         <div class="results">
-          <h2>fastasf*ck Results</h2>
+          <h2>Results</h2>
           <div class="metrics">
-            <div class="metric"><div>Ping</div><div class="value" id="pingVal">--</div><div>ms</div></div>
-            <div class="metric"><div>Download</div><div class="value" id="dlVal">--</div><div>Mbps</div></div>
-            <div class="metric"><div>Upload</div><div class="value" id="ulVal">--</div><div>Mbps</div></div>
+            <div class="metric">
+              <div class="label">Ping</div>
+              <div class="value" id="pingVal">--</div>
+              <div class="unit">ms</div>
+            </div>
+            <div class="metric">
+              <div class="label">Download</div>
+              <div class="value" id="dlVal">--</div>
+              <div class="unit">Mbps</div>
+            </div>
+            <div class="metric">
+              <div class="label">Upload</div>
+              <div class="value" id="ulVal">--</div>
+              <div class="unit">Mbps</div>
+            </div>
           </div>
           <div class="verdict" id="verdict">Run a test to see your connection rating.</div>
         </div>
 
         <div class="entities">
-          <div class="entity-card"><i class="fas fa-desktop"></i><h3>Your Device</h3><p>Sends and receives packets while timing each phase.</p><details><summary>More</summary>Uses OS networking APIs and TCP/IP stack; retries occur when packets drop.</details></div>
-          <div class="entity-card"><i class="fas fa-network-wired"></i><h3>Router</h3><p>Directs local traffic to the next hop on your network path.</p><details><summary>More</summary>Performs routing and often NAT, queueing packets under high load.</details></div>
-          <div class="entity-card"><i class="fas fa-cloud"></i><h3>ISP</h3><p>Backbone provider carrying traffic across regional infrastructure.</p><details><summary>More</summary>Peering and congestion inside the provider influence throughput and latency.</details></div>
-          <div class="entity-card"><i class="fas fa-server"></i><h3>Server</h3><p>Test endpoint that sends and receives measured packet streams.</p><details><summary>More</summary>Server CPU, NIC capacity, and distance can cap observed speed.</details></div>
+          <div class="entity-card">
+            <i class="fas fa-desktop"></i>
+            <h3>Your Device</h3>
+            <p>Sends and receives packets while timing each phase.</p>
+            <details><summary>Learn more</summary><p>Uses OS networking APIs and TCP/IP stack; retries occur when packets drop.</p></details>
+          </div>
+          <div class="entity-card">
+            <i class="fas fa-network-wired"></i>
+            <h3>Router</h3>
+            <p>Directs local traffic to the next hop on your network path.</p>
+            <details><summary>Learn more</summary><p>Performs routing and often NAT, queueing packets under high load.</p></details>
+          </div>
+          <div class="entity-card">
+            <i class="fas fa-cloud"></i>
+            <h3>ISP</h3>
+            <p>Backbone provider carrying traffic across regional infrastructure.</p>
+            <details><summary>Learn more</summary><p>Peering and congestion inside the provider influence throughput and latency.</p></details>
+          </div>
+          <div class="entity-card">
+            <i class="fas fa-server"></i>
+            <h3>Server</h3>
+            <p>Test endpoint that sends and receives measured packet streams.</p>
+            <details><summary>Learn more</summary><p>Server CPU, NIC capacity, and distance can cap observed speed.</p></details>
+          </div>
         </div>
       </section>
 
       <section class="visual">
-        <canvas id="netCanvas" width="900" height="350"></canvas>
+        <canvas id="netCanvas" width="900" height="350" aria-label="Network visualization showing packets traveling between devices"></canvas>
       </section>
     </div>
     <footer>© fastasf*ck – educational demo. Packets simulated for clarity.</footer>
@@ -239,44 +512,57 @@
     state.running=true; state.paused=false; state.phase='ping'; state.packets=[];
     pingVal.textContent='--'; dlVal.textContent='--'; ulVal.textContent='--'; verdict.textContent='Testing path and throughput...';
 
-    setProgress(5,'Phase 1/3: Ping');
+    setProgress(5,'<i class="fas fa-circle-notch phase-icon"></i> Phase 1/3: Ping');
     spawn('ping');
     state.ping = await measurePing();
     pingVal.textContent = state.ping;
-    setProgress(33,'Phase 2/3: Download');
+    setProgress(33,'<i class="fas fa-download phase-icon"></i> Phase 2/3: Download');
 
     const target = Number(bw.value);
     for(let i=0;i<34;i++){
       if(!state.running) return;
       while(state.paused) await new Promise(r=>setTimeout(r,120));
       spawn('download');
-      setProgress(33 + i*1.2,'Phase 2/3: Download');
+      setProgress(33 + i*1.2,'<i class="fas fa-download phase-icon"></i> Phase 2/3: Download');
       await new Promise(r=>setTimeout(r,60));
     }
     state.download = Math.max(1, Math.round(target*(0.75 + Math.random()*0.25) * 10)/10);
     dlVal.textContent = state.download;
 
-    setProgress(74,'Phase 3/3: Upload');
+    setProgress(74,'<i class="fas fa-upload phase-icon"></i> Phase 3/3: Upload');
     for(let i=0;i<22;i++){
       if(!state.running) return;
       while(state.paused) await new Promise(r=>setTimeout(r,120));
       spawn('upload', true);
-      setProgress(74 + i*1.1,'Phase 3/3: Upload');
+      setProgress(74 + i*1.1,'<i class="fas fa-upload phase-icon"></i> Phase 3/3: Upload');
       await new Promise(r=>setTimeout(r,75));
     }
     state.upload = Math.max(1, Math.round(target*(0.45 + Math.random()*0.35) * 10)/10);
     ulVal.textContent = state.upload;
 
-    setProgress(100,'Complete');
+    setProgress(100,'<i class="fas fa-check-circle phase-icon"></i> Complete');
     state.running=false;
+    document.getElementById('pauseBtn').disabled = true;
+    document.getElementById('stopBtn').disabled = true;
+    document.getElementById('startBtn').disabled = false;
     verdict.textContent = state.download > 500 ? 'Verdict: Exceptional throughput for demanding tasks.' : state.download > 150 ? 'Verdict: Strong connection for everyday heavy usage.' : 'Verdict: Basic to moderate connection quality.';
   }
 
-  document.getElementById('startBtn').onclick = () => { if(!state.running) runTest(); };
+  document.getElementById('startBtn').onclick = () => { 
+    if(!state.running) {
+      runTest();
+      document.getElementById('pauseBtn').disabled = false;
+      document.getElementById('stopBtn').disabled = false;
+      document.getElementById('startBtn').disabled = true;
+    }
+  };
   document.getElementById('stopBtn').onclick = () => {
     state.running=false; state.paused=false; state.packets=[]; setProgress(0,'Idle');
     pingVal.textContent='--'; dlVal.textContent='--'; ulVal.textContent='--'; verdict.textContent='Run a test to see your connection rating.';
     document.getElementById('pauseBtn').innerHTML = '<i class="fas fa-pause"></i> Pause';
+    document.getElementById('pauseBtn').disabled = true;
+    document.getElementById('stopBtn').disabled = true;
+    document.getElementById('startBtn').disabled = false;
   };
   document.getElementById('pauseBtn').onclick = () => {
     if(!state.running) return;
@@ -292,7 +578,7 @@
   const themeBtn = document.getElementById('themeBtn');
   function applyTheme(mode){
     document.body.classList.toggle('light', mode==='light');
-    themeBtn.innerHTML = mode==='light' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+    themeBtn.innerHTML = mode==='light' ? '<i class="fas fa-sun"></i><span class="theme-text">Theme</span>' : '<i class="fas fa-moon"></i><span class="theme-text">Theme</span>';
     localStorage.setItem('fastasf_theme', mode);
   }
   themeBtn.onclick = () => applyTheme(document.body.classList.contains('light') ? 'dark' : 'light');
