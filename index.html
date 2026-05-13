@@ -101,7 +101,7 @@
             <button class="stop" id="stopBtn"><i class="fas fa-stop"></i> Stop / Reset</button>
           </div>
 
-          <label for="bw"><i class="fas fa-gauge-high"></i> Bandwidth target: <strong id="bwLabel">300</strong> Mbps</label>
+          <label for="bw"><i class="fas fa-gauge-high"></i> Bandwidth target (your plan max): <strong id="bwLabel">300</strong> Mbps</label>
           <input type="range" min="1" max="1000" value="300" id="bw" />
 
           <div class="row">
@@ -187,7 +187,7 @@
   function drawArrow(x,y,s){ ctx.fillStyle=lineColor(); ctx.beginPath(); ctx.moveTo(x-s/2,y-6); ctx.lineTo(x+s/2,y); ctx.lineTo(x-s/2,y+6); ctx.closePath(); ctx.fill(); }
 
   function spawn(type, reverse=false){
-    const duration = type==='ping'?1.0:type==='download'?1.5:1.4;
+    const duration = type==='ping'?1.0:type==='download'?1.25:1.2;
     state.packets.push({type, reverse, p:0, duration, dead:false, drop: state.loss && Math.random()<0.12});
   }
 
@@ -235,6 +235,14 @@
 
   function setProgress(p, phase){ state.progress=p; progressBar.style.width=p+'%'; phaseLabel.textContent=phase; }
 
+  function realisticRange(target){
+    const dlFloor = Math.max(5, target * 0.55);
+    const dlCeil = Math.max(dlFloor + 1, target * 0.94);
+    const ulFloor = Math.max(3, Math.min(target * 0.35, dlFloor * 0.75));
+    const ulCeil = Math.max(ulFloor + 1, Math.min(target * 0.88, dlCeil * 0.9));
+    return { dlFloor, dlCeil, ulFloor, ulCeil };
+  }
+
   async function runTest(){
     state.running=true; state.paused=false; state.phase='ping'; state.packets=[];
     pingVal.textContent='--'; dlVal.textContent='--'; ulVal.textContent='--'; verdict.textContent='Testing path and throughput...';
@@ -246,26 +254,36 @@
     setProgress(33,'Phase 2/3: Download');
 
     const target = Number(bw.value);
+    const { dlFloor, dlCeil, ulFloor, ulCeil } = realisticRange(target);
+
     for(let i=0;i<34;i++){
       if(!state.running) return;
-      while(state.paused) await new Promise(r=>setTimeout(r,120));
+      while(state.paused) await new Promise(r=>setTimeout(r,80));
       spawn('download');
+      spawn('download');
+      const phaseRatio = i/33;
+      const liveDl = dlFloor + (dlCeil-dlFloor) * (0.15 + 0.85*phaseRatio) + (Math.random()*4-2);
+      dlVal.textContent = (Math.max(dlFloor, Math.min(dlCeil, liveDl))).toFixed(1);
       setProgress(33 + i*1.2,'Phase 2/3: Download');
-      await new Promise(r=>setTimeout(r,60));
+      await new Promise(r=>setTimeout(r,42));
     }
-    state.download = Math.max(1, Math.round(target*(0.75 + Math.random()*0.25) * 10)/10);
-    dlVal.textContent = state.download;
+    state.download = Number((dlFloor + Math.random()*(dlCeil-dlFloor)).toFixed(1));
+    dlVal.textContent = state.download.toFixed(1);
 
     setProgress(74,'Phase 3/3: Upload');
     for(let i=0;i<22;i++){
       if(!state.running) return;
-      while(state.paused) await new Promise(r=>setTimeout(r,120));
+      while(state.paused) await new Promise(r=>setTimeout(r,80));
       spawn('upload', true);
+      spawn('upload', true);
+      const phaseRatio = i/21;
+      const liveUl = ulFloor + (ulCeil-ulFloor) * (0.2 + 0.8*phaseRatio) + (Math.random()*3-1.5);
+      ulVal.textContent = (Math.max(ulFloor, Math.min(ulCeil, liveUl))).toFixed(1);
       setProgress(74 + i*1.1,'Phase 3/3: Upload');
-      await new Promise(r=>setTimeout(r,75));
+      await new Promise(r=>setTimeout(r,50));
     }
-    state.upload = Math.max(1, Math.round(target*(0.45 + Math.random()*0.35) * 10)/10);
-    ulVal.textContent = state.upload;
+    state.upload = Number((ulFloor + Math.random()*(ulCeil-ulFloor)).toFixed(1));
+    ulVal.textContent = state.upload.toFixed(1);
 
     setProgress(100,'Complete');
     state.running=false;
