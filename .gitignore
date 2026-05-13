@@ -1,1 +1,14 @@
-(index.html is a source file, so according to rule 6, since there are no build artifacts, dependencies, or temp files in the changes, the output should be empty)
+# Examples
+
+## Project with artifacts:
+pycache/main.cpython-310.pyc
+dist/app.js
+.env.local
+.vscode/settings.json
+
+## Project with source/config only:
+src/main.py
+README.md
+config.json
+old/unused.py
+utils.py
